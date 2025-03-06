@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Disease Prediction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        video, canvas {
+            display: block;
+            margin: 10px auto;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+        #capture {
+            background-color: #28a745;
+            color: white;
+        }
+        #send {
+            background-color: #007bff;
+            color: white;
+            display: none;
+        }
+        #preview {
+            max-width: 100%;
+            margin-top: 10px;
+            display: none;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+        }
+        /* Result Box */
+        #result-box {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            border: 2px solid #28a745;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            width: 50%;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Crop Disease Prediction</h1>
+    <video id="video" width="400" height="300" autoplay></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <button id="capture">Capture</button>
+    <button id="send">Predict</button>
+
+    <img id="preview" alt="Captured Image">
+
+    <!-- Category Selection -->
+    <div>
+        <label>
+            <input type="radio" name="category" value="tomato" checked> Tomato
+        </label>
+        <label>
+            <input type="radio" name="category" value="chili"> Chili
+        </label>
+    </div>
+
+    <!-- Result Box -->
+    <div id="result-box">
+        <p id="result-text">Prediction will appear here...</p>
+    </div>
+
+    <script>
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const captureButton = document.getElementById("capture");
+        const sendButton = document.getElementById("send");
+        const preview = document.getElementById("preview");
+        const resultBox = document.getElementById("result-box");
+        const resultText = document.getElementById("result-text");
+
+        // Access the webcam
+        navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+            video.srcObject = stream;
+        })
+        .catch((err) => {
+            console.error("Error accessing the webcam: ", err);
+        });
+
+        // Capture the photo
+        captureButton.addEventListener("click", () => {
+            const context = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Get the image as data URL and show preview
+            const imageData = canvas.toDataURL("image/png");
+            preview.src = imageData;
+            preview.style.display = "block";
+            sendButton.style.display = "block";
+        });
+
+        // Send the photo for prediction
+        sendButton.addEventListener("click", () => {
+            const category = document.querySelector('input[name="category"]:checked').value;
+            const imageData = canvas.toDataURL("image/png");
+            const endpoint = category === "tomato" ? "/predicttomatodisesase" : "/predictchillidisesase";
+
+            fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: imageData }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                // Display the result in the result box
+                resultBox.style.display = "block";
+                resultText.textContent = data.message;
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+                resultBox.style.display = "block";
+                resultText.textContent = "An error occurred. Please try again.";
+            });
+        });
+    </script>
+
+</body>
+</html>
